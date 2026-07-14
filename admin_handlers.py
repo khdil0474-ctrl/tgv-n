@@ -4,13 +4,13 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 
 import database as db
-from config import ADMIN_ID, CONTENT_MAP
+from config import ADMIN_IDS, CONTENT_MAP
 from keyboards import admin_menu_kb, admin_select_content_kb
 from states import AdminPost
 
 router = Router()
-router.message.filter(F.from_user.id == ADMIN_ID)
-router.callback_query.filter(F.from_user.id == ADMIN_ID)
+router.message.filter(F.from_user.id.in_(ADMIN_IDS))
+router.callback_query.filter(F.from_user.id.in_(ADMIN_IDS))
 
 
 @router.message(Command("admin"))
