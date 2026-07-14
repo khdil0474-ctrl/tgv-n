@@ -3,7 +3,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message, CallbackQuery
 
 import database as db
-from config import MENU_TITLES, CONTENT_MAP, ADMIN_ID
+from config import MENU_TITLES, CONTENT_MAP, ADMIN_IDS
 from keyboards import channels_kb, main_menu_kb, submenu_kb, content_view_kb
 from subscription import get_not_subscribed
 
@@ -11,7 +11,7 @@ router = Router()
 
 
 async def register_and_notify(bot: Bot, user_id: int, username: str, full_name: str):
-    """Agar foydalanuvchi yangi bo'lsa, bazaga qo'shadi va adminga xabar beradi."""
+    """Agar foydalanuvchi yangi bo'lsa, bazaga qo'shadi va barcha adminlarga xabar beradi."""
     if db.user_exists(user_id):
         return
     total = db.add_user(user_id, username, full_name)
@@ -23,10 +23,11 @@ async def register_and_notify(bot: Bot, user_id: int, username: str, full_name: 
         f"🆔 ID: <code>{user_id}</code>\n\n"
         f"📊 Bu — botning <b>{total}</b>-chi foydalanuvchisi!"
     )
-    try:
-        await bot.send_message(ADMIN_ID, text)
-    except Exception:
-        pass
+    for admin_id in ADMIN_IDS:
+        try:
+            await bot.send_message(admin_id, text)
+        except Exception:
+            pass
 
 
 @router.message(CommandStart())
@@ -48,9 +49,10 @@ async def cmd_start(message: Message, bot: Bot):
         message.from_user.full_name,
     )
 
+    is_admin = message.from_user.id in ADMIN_IDS
     await message.answer(
         "✅ Xush kelibsiz!\n\nQuyidagi bo'limlardan birini tanlang 👇",
-        reply_markup=main_menu_kb(),
+        reply_markup=main_menu_kb(is_admin=is_admin),
     )
 
 
@@ -73,7 +75,7 @@ async def cb_check_sub(callback: CallbackQuery, bot: Bot):
 
     await callback.message.edit_text(
         "✅ Obuna tasdiqlandi!\n\nQuyidagi bo'limlardan birini tanlang 👇",
-        reply_markup=main_menu_kb(),
+        reply_markup=main_menu_kb(is_admin=callback.from_user.id in ADMIN_IDS),
     )
     await callback.answer()
 
@@ -82,7 +84,7 @@ async def cb_check_sub(callback: CallbackQuery, bot: Bot):
 async def cb_back_main(callback: CallbackQuery):
     await callback.message.edit_text(
         "📍 Bosh menyu\n\nQuyidagi bo'limlardan birini tanlang 👇",
-        reply_markup=main_menu_kb(),
+        reply_markup=main_menu_kb(is_admin=callback.from_user.id in ADMIN_IDS),
     )
     await callback.answer()
 
@@ -104,7 +106,7 @@ async def cb_back_submenu(callback: CallbackQuery):
     if parent_key == "main":
         await callback.message.edit_text(
             "📍 Bosh menyu\n\nQuyidagi bo'limlardan birini tanlang 👇",
-            reply_markup=main_menu_kb(),
+            reply_markup=main_menu_kb(is_admin=callback.from_user.id in ADMIN_IDS),
         )
     else:
         title = MENU_TITLES.get(parent_key, "Bo'lim")
