@@ -20,7 +20,7 @@ def channels_kb() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def main_menu_kb() -> InlineKeyboardMarkup:
+def main_menu_kb(is_admin: bool = False) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for item in MAIN_MENU:
         builder.add(InlineKeyboardButton(text=item["title"], callback_data=item["key"]))
@@ -28,6 +28,11 @@ def main_menu_kb() -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(text="📞 Aloqaga chiqish", url=f"https://t.me/{ADMIN_USERNAME}")
     )
+    if is_admin:
+        builder.row(
+            InlineKeyboardButton(text="🛠 Post/Tugma qo'shish", callback_data="admin_post"),
+            InlineKeyboardButton(text="📊 Statistika", callback_data="admin_stats"),
+        )
     return builder.as_markup()
 
 
