@@ -5,7 +5,10 @@ import os
 # Agar qo'shmasangiz, pastdagi standart qiymatlar ishlatiladi.
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8258790417:AAGJ__XEzSc_cP938-DdQxCJYEb_Joa4LlI")
-ADMIN_ID = int(os.getenv("ADMIN_ID", "8969109663"))
+
+# Bir nechta admin bo'lishi mumkin - ro'yxatga ID qo'shib boraverasiz
+ADMIN_IDS = [8969109663, 8914193938]
+ADMIN_ID = ADMIN_IDS[0]  # eski kodlar bilan moslik uchun (bildirishnoma shu ID'ga ustuvor yuboriladi)
 ADMIN_USERNAME = "auwsn"  # Aloqa uchun @username
 
 DB_PATH = os.getenv("DB_PATH", "bot.db")
