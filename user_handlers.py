@@ -1,9 +1,10 @@
 from aiogram import Router, Bot, F
-from aiogram.filters import CommandStart
-from aiogram.types import Message, CallbackQuery
+from aiogram.filters import CommandStart, Command
+from aiogram.types import Message, CallbackQuery, InlineKeyboardButton
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 import database as db
-from config import MENU_TITLES, CONTENT_MAP, ADMIN_IDS
+from config import MENU_TITLES, CONTENT_MAP, ADMIN_IDS, ADMIN_USERNAME
 from keyboards import channels_kb, main_menu_kb, submenu_kb, content_view_kb
 from subscription import get_not_subscribed
 
@@ -53,6 +54,88 @@ async def cmd_start(message: Message, bot: Bot):
     await message.answer(
         "✅ Xush kelibsiz!\n\nQuyidagi bo'limlardan birini tanlang 👇",
         reply_markup=main_menu_kb(is_admin=is_admin),
+    )
+
+
+@router.message(Command("darslar"))
+async def cmd_darslar(message: Message, bot: Bot):
+    not_subscribed = await get_not_subscribed(bot, message.from_user.id)
+    if not_subscribed:
+        await message.answer(
+            "👋 Botdan foydalanish uchun avval kanallarga obuna bo'ling:",
+            reply_markup=channels_kb(),
+        )
+        return
+    await message.answer(
+        "🎓 <b>Barcha darslar</b>\n\n"
+        "Barcha darslar tugmalarda — tugmalardan foydalaning 👇",
+        reply_markup=submenu_kb("menu_dars"),
+    )
+
+
+@router.message(Command("prompt"))
+async def cmd_prompt(message: Message, bot: Bot):
+    not_subscribed = await get_not_subscribed(bot, message.from_user.id)
+    if not_subscribed:
+        await message.answer(
+            "👋 Botdan foydalanish uchun avval kanallarga obuna bo'ling:",
+            reply_markup=channels_kb(),
+        )
+        return
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="📝 Promptlar kanali", url="https://t.me/AI_YANGILIKLA"))
+    await message.answer(
+        "📝 <b>Promptlar</b>\n\n"
+        "Barcha tayyor AI promptlarimiz quyidagi kanalda joylashgan 👇",
+        reply_markup=builder.as_markup(),
+    )
+
+
+@router.message(Command("haqida"))
+async def cmd_haqida(message: Message):
+    await message.answer(
+        "🌟 <b>Bilimdon haqida</b>\n\n"
+        "Bilimdon — bu sun'iy intellekt (AI) dunyosini har bir insonga "
+        "tushunarli va oson qilib yetkazish uchun yaratilgan ta'lim platformasi.\n\n"
+        "🎯 <b>Bizning maqsadimiz:</b>\n"
+        "AI bilan ishlashni bilmaganlarga — oddiy tilda o'rgatish, "
+        "biladiganlarga esa — yangi bilim va imkoniyatlar taqdim etish.\n\n"
+        "📚 <b>Bizda nima bor:</b>\n"
+        "🔹 Foydali darslar va vizual infografikalar\n"
+        "🔹 Tayyor AI promptlari\n"
+        "🔹 AI yangiliklari va foydali resurslar\n"
+        "🔹 Savol-javob va faol hamjamiyat\n\n"
+        "🤝 Bilimdon oilasiga xush kelibsiz — birga o'rganamiz, birga rivojlanamiz!\n\n"
+        "📢 Kanallarimiz va guruhimizga qo'shilishni unutmang 👇",
+        reply_markup=channels_kb(),
+    )
+
+
+@router.message(Command("yordam"))
+async def cmd_yordam(message: Message):
+    await message.answer(
+        "🆘 <b>Yordam va qo'llab-quvvatlash</b>\n\n"
+        "Botdan foydalanishda qiynalsangiz, quyidagilarga amal qiling:\n\n"
+        "1️⃣ /start — botni qayta ishga tushirish\n"
+        "2️⃣ Bosh menyudagi tugmalar orqali kerakli bo'limni toping\n"
+        "3️⃣ /darslar — barcha darslarni ko'rish\n"
+        "4️⃣ /prompt — tayyor promptlarni olish\n\n"
+        "Muammo hal bo'lmasa — administratorga murojaat qiling, "
+        "biz doim yordam berishga tayyormiz! 🤝",
+    )
+
+
+@router.message(Command("aloqa"))
+async def cmd_aloqa(message: Message):
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="📞 Administrator bilan bog'lanish", url=f"https://t.me/{ADMIN_USERNAME}")
+    )
+    await message.answer(
+        "📞 <b>Biz bilan bog'lanish</b>\n\n"
+        "Savol, taklif yoki hamkorlik bo'yicha murojaat uchun "
+        "administratorimizga yozing 👇",
+        reply_markup=builder.as_markup(),
     )
 
 
