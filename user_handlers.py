@@ -4,11 +4,19 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 import database as db
-from config import MENU_TITLES, CONTENT_MAP, ADMIN_IDS, ADMIN_USERNAME
-from keyboards import channels_kb, main_menu_kb, submenu_kb, content_view_kb
+from config import MENU_TITLES, CONTENT_MAP, MAIN_MENU, ADMIN_IDS, ADMIN_USERNAME
+from keyboards import (
+    channels_kb,
+    main_menu_reply_kb,
+    submenu_kb,
+    content_view_kb,
+    CONTACT_BTN_TEXT,
+)
 from subscription import get_not_subscribed
 
 router = Router()
+
+TEXT_TO_KEY = {item["title"]: item["key"] for item in MAIN_MENU}
 
 
 async def register_and_notify(bot: Bot, user_id: int, username: str, full_name: str):
@@ -29,6 +37,18 @@ async def register_and_notify(bot: Bot, user_id: int, username: str, full_name: 
             await bot.send_message(admin_id, text)
         except Exception:
             pass
+
+
+async def ensure_subscribed(bot: Bot, message: Message) -> bool:
+    """Obunani tekshiradi; obuna bo'lmasa xabar yuborib False qaytaradi."""
+    not_subscribed = await get_not_subscribed(bot, message.from_user.id)
+    if not_subscribed:
+        await message.answer(
+            "👋 Botdan foydalanish uchun avval barcha kanallarga obuna bo'ling:",
+            reply_markup=channels_kb(),
+        )
+        return False
+    return True
 
 
 @router.message(CommandStart())
@@ -53,18 +73,13 @@ async def cmd_start(message: Message, bot: Bot):
     is_admin = message.from_user.id in ADMIN_IDS
     await message.answer(
         "✅ Xush kelibsiz!\n\nQuyidagi bo'limlardan birini tanlang 👇",
-        reply_markup=main_menu_kb(is_admin=is_admin),
+        reply_markup=main_menu_reply_kb(is_admin=is_admin),
     )
 
 
 @router.message(Command("darslar"))
 async def cmd_darslar(message: Message, bot: Bot):
-    not_subscribed = await get_not_subscribed(bot, message.from_user.id)
-    if not_subscribed:
-        await message.answer(
-            "👋 Botdan foydalanish uchun avval kanallarga obuna bo'ling:",
-            reply_markup=channels_kb(),
-        )
+    if not await ensure_subscribed(bot, message):
         return
     await message.answer(
         "🎓 <b>Barcha darslar</b>\n\n"
@@ -75,12 +90,7 @@ async def cmd_darslar(message: Message, bot: Bot):
 
 @router.message(Command("prompt"))
 async def cmd_prompt(message: Message, bot: Bot):
-    not_subscribed = await get_not_subscribed(bot, message.from_user.id)
-    if not_subscribed:
-        await message.answer(
-            "👋 Botdan foydalanish uchun avval kanallarga obuna bo'ling:",
-            reply_markup=channels_kb(),
-        )
+    if not await ensure_subscribed(bot, message):
         return
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(text="📝 Promptlar kanali", url="https://t.me/AI_YANGILIKLA"))
@@ -125,8 +135,7 @@ async def cmd_yordam(message: Message):
     )
 
 
-@router.message(Command("aloqa"))
-async def cmd_aloqa(message: Message):
+async def send_aloqa(message: Message):
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(text="📞 Administrator bilan bog'lanish", url=f"https://t.me/{ADMIN_USERNAME}")
@@ -136,6 +145,28 @@ async def cmd_aloqa(message: Message):
         "Savol, taklif yoki hamkorlik bo'yicha murojaat uchun "
         "administratorimizga yozing 👇",
         reply_markup=builder.as_markup(),
+    )
+
+
+@router.message(Command("aloqa"))
+async def cmd_aloqa(message: Message):
+    await send_aloqa(message)
+
+
+@router.message(F.text == CONTACT_BTN_TEXT)
+async def btn_aloqa(message: Message):
+    await send_aloqa(message)
+
+
+@router.message(F.text.in_(list(TEXT_TO_KEY.keys())))
+async def open_main_submenu(message: Message, bot: Bot):
+    if not await ensure_subscribed(bot, message):
+        return
+    key = TEXT_TO_KEY[message.text]
+    title = MENU_TITLES.get(key, "Bo'lim")
+    await message.answer(
+        f"📍 {title}\n\nKerakli bo'limni tanlang 👇",
+        reply_markup=submenu_kb(key),
     )
 
 
@@ -156,9 +187,10 @@ async def cb_check_sub(callback: CallbackQuery, bot: Bot):
         callback.from_user.full_name,
     )
 
-    await callback.message.edit_text(
-        "✅ Obuna tasdiqlandi!\n\nQuyidagi bo'limlardan birini tanlang 👇",
-        reply_markup=main_menu_kb(is_admin=callback.from_user.id in ADMIN_IDS),
+    await callback.message.edit_text("✅ Obuna tasdiqlandi!", reply_markup=None)
+    await callback.message.answer(
+        "Quyidagi bo'limlardan birini tanlang 👇",
+        reply_markup=main_menu_reply_kb(is_admin=callback.from_user.id in ADMIN_IDS),
     )
     await callback.answer()
 
@@ -166,19 +198,8 @@ async def cb_check_sub(callback: CallbackQuery, bot: Bot):
 @router.callback_query(F.data == "back:main")
 async def cb_back_main(callback: CallbackQuery):
     await callback.message.edit_text(
-        "📍 Bosh menyu\n\nQuyidagi bo'limlardan birini tanlang 👇",
-        reply_markup=main_menu_kb(is_admin=callback.from_user.id in ADMIN_IDS),
-    )
-    await callback.answer()
-
-
-@router.callback_query(F.data.in_(["menu_dars", "menu_prompt", "menu_sayt", "menu_bot"]))
-async def cb_open_menu(callback: CallbackQuery):
-    key = callback.data
-    title = MENU_TITLES.get(key, "Bo'lim")
-    await callback.message.edit_text(
-        f"📍 {title}\n\nKerakli bo'limni tanlang 👇",
-        reply_markup=submenu_kb(key),
+        "🏠 Pastdagi asosiy menyudan kerakli bo'limni tanlang.",
+        reply_markup=None,
     )
     await callback.answer()
 
@@ -188,8 +209,8 @@ async def cb_back_submenu(callback: CallbackQuery):
     parent_key = callback.data.split(":", 1)[1]
     if parent_key == "main":
         await callback.message.edit_text(
-            "📍 Bosh menyu\n\nQuyidagi bo'limlardan birini tanlang 👇",
-            reply_markup=main_menu_kb(is_admin=callback.from_user.id in ADMIN_IDS),
+            "🏠 Pastdagi asosiy menyudan kerakli bo'limni tanlang.",
+            reply_markup=None,
         )
     else:
         title = MENU_TITLES.get(parent_key, "Bo'lim")
