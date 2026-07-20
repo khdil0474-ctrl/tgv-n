@@ -1,7 +1,16 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import (
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    ReplyKeyboardMarkup,
+    KeyboardButton,
+)
+from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
 from config import CHANNELS, MAIN_MENU, CONTENT_MAP, ADMIN_USERNAME
+
+CONTACT_BTN_TEXT = "📞 Aloqaga chiqish"
+ADMIN_POST_BTN_TEXT = "🛠 Post/Tugma qo'shish"
+ADMIN_STATS_BTN_TEXT = "📊 Statistika"
 
 
 def channels_kb() -> InlineKeyboardMarkup:
@@ -20,20 +29,19 @@ def channels_kb() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def main_menu_kb(is_admin: bool = False) -> InlineKeyboardMarkup:
-    builder = InlineKeyboardBuilder()
+def main_menu_reply_kb(is_admin: bool = False) -> ReplyKeyboardMarkup:
+    """Pastda doimiy turadigan, rangli (pill) tugmali bosh menyu."""
+    builder = ReplyKeyboardBuilder()
     for item in MAIN_MENU:
-        builder.add(InlineKeyboardButton(text=item["title"], callback_data=item["key"]))
+        builder.add(KeyboardButton(text=item["title"]))
+    builder.add(KeyboardButton(text=CONTACT_BTN_TEXT))
     builder.adjust(2)
-    builder.row(
-        InlineKeyboardButton(text="📞 Aloqaga chiqish", url=f"https://t.me/{ADMIN_USERNAME}")
-    )
     if is_admin:
         builder.row(
-            InlineKeyboardButton(text="🛠 Post/Tugma qo'shish", callback_data="admin_post"),
-            InlineKeyboardButton(text="📊 Statistika", callback_data="admin_stats"),
+            KeyboardButton(text=ADMIN_POST_BTN_TEXT),
+            KeyboardButton(text=ADMIN_STATS_BTN_TEXT),
         )
-    return builder.as_markup()
+    return builder.as_markup(resize_keyboard=True)
 
 
 def submenu_kb(parent_key: str) -> InlineKeyboardMarkup:
