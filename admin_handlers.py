@@ -5,7 +5,12 @@ from aiogram.types import Message, CallbackQuery
 
 import database as db
 from config import ADMIN_IDS, CONTENT_MAP
-from keyboards import admin_menu_kb, admin_select_content_kb
+from keyboards import (
+    admin_menu_kb,
+    admin_select_content_kb,
+    ADMIN_POST_BTN_TEXT,
+    ADMIN_STATS_BTN_TEXT,
+)
 from states import AdminPost
 
 router = Router()
@@ -18,24 +23,42 @@ async def cmd_admin(message: Message):
     await message.answer("🛠 Admin panel", reply_markup=admin_menu_kb())
 
 
-@router.callback_query(F.data == "admin_stats")
-async def cb_admin_stats(callback: CallbackQuery):
+async def send_stats(message: Message):
     stats = db.get_stats()
-    await callback.message.answer(
+    await message.answer(
         "📊 <b>Statistika</b>\n\n"
         f"👥 Jami foydalanuvchilar: <b>{stats['total']}</b>\n"
         f"🆕 Bugun qo'shilganlar: <b>{stats['today']}</b>"
     )
+
+
+async def start_post_flow(message: Message, state: FSMContext):
+    await state.set_state(AdminPost.choosing_button)
+    await message.answer(
+        "❓ Qaysi tugmaga post/kontent qo'shamiz?\n\nKerakli bo'limni tanlang 👇",
+        reply_markup=admin_select_content_kb(),
+    )
+
+
+@router.message(F.text == ADMIN_STATS_BTN_TEXT)
+async def btn_admin_stats(message: Message):
+    await send_stats(message)
+
+
+@router.message(F.text == ADMIN_POST_BTN_TEXT)
+async def btn_admin_post(message: Message, state: FSMContext):
+    await start_post_flow(message, state)
+
+
+@router.callback_query(F.data == "admin_stats")
+async def cb_admin_stats(callback: CallbackQuery):
+    await send_stats(callback.message)
     await callback.answer()
 
 
 @router.callback_query(F.data == "admin_post")
 async def cb_admin_post(callback: CallbackQuery, state: FSMContext):
-    await state.set_state(AdminPost.choosing_button)
-    await callback.message.answer(
-        "❓ Qaysi tugmaga post/kontent qo'shamiz?\n\nKerakli bo'limni tanlang 👇",
-        reply_markup=admin_select_content_kb(),
-    )
+    await start_post_flow(callback.message, state)
     await callback.answer()
 
 
